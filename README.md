@@ -1,103 +1,173 @@
-# FrameDiff-Security-System
+<div align="center">
 
-## Descripción del Proyecto / Project Description
+# FrameDiff Security System
 
-### Español
-FrameDiff-Security-System es un sistema de videovigilancia y detección de movimiento en tiempo real desarrollado como proyecto académico para el curso de Programación Orientada a Objetos (POO).
+**Real-time motion detection and video surveillance, built from scratch in Java.**
 
-El sistema captura video a través de una cámara web utilizando la librería Sarxos Webcam API (configurada a una resolución estable de 640x480 para garantizar compatibilidad multiplataforma) y procesa los fotogramas mediante un motor personalizado de análisis matricial basado en la técnica de diferencia de fotogramas (Frame-Differencing). El software incluye la delimitación dinámica de zonas de monitoreo, alertas acústicas mediante la API `javax.sound.sampled` y la captura automatizada de evidencias fotográficas ante eventos de intrusión.
+![Java](https://img.shields.io/badge/Java-17+-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Swing](https://img.shields.io/badge/UI-Swing-4B8BBE?style=for-the-badge)
+![Webcam](https://img.shields.io/badge/Capture-Sarxos%20Webcam-2EA44F?style=for-the-badge)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-0A66C2?style=for-the-badge)
+![Status](https://img.shields.io/badge/Type-Academic%20Project-6E40C9?style=for-the-badge)
 
-### English
-FrameDiff-Security-System is a real-time video surveillance and motion detection system developed as an academic project for the Object-Oriented Programming (OOP) course.
-
-The system captures video from a webcam using the Sarxos Webcam API (configured at a stable 640x480 resolution to ensure cross-platform compatibility) and processes frames through a custom matrix analysis engine based on the Frame-Differencing technique. Features include dynamic monitoring zone delimitation, acoustic alerts via the `javax.sound.sampled` API, and automated photographic evidence logging during intrusion events.
-
----
-
-## Arquitectura y Principios de POO / Architecture and OOP Principles
-
-### Español
-El proyecto fue diseñado aplicando los principios fundamentales de la Programación Orientada a Objetos:
-
-- **Encapsulamiento / Encapsulation:** Las clases delimitan estrictamente la lógica de procesamiento (`Detector`), la gestión de recursos de audio y video, y la interfaz de usuario (`Ventana`), manteniendo los atributos protegidos y expuestos únicamente mediante métodos accesores.
-- **Modularidad y Separación de Responsabilidades / Modularity and Separation of Concerns:** La lógica de detección de movimiento se encuentra aislada de los eventos de la interfaz gráfica Swing y de la captura de hardware.
-- **Manejo de Excepciones y Recursos / Exception and Resource Management:** Implementación de control de excepciones I/O y de audio para garantizar la estabilidad del sistema en entornos Linux y Windows.
-
-### English
-The project was designed adhering to fundamental Object-Oriented Programming principles:
-
-- **Encapsulation:** Classes strictly delineate frame processing logic (`Detector`), audio/video resource management, and user interface controls (`Ventana`), maintaining protected fields accessed only via explicit getter/setter methods.
-- **Modularity and Separation of Concerns:** Motion detection calculation is completely decoupled from Swing GUI rendering and hardware acquisition tasks.
-- **Exception and Resource Management:** Robust handling of stream I/O and audio device exceptions ensuring software stability in Linux and Windows environments.
+</div>
 
 ---
 
-## Características Técnicas / Technical Features
+## Overview
 
-### Español
-- **Procesamiento de Video / Video Processing:** Captura y renderizado continuo a resolución 640x480 (optimizada para compatibilidad multiplataforma).
-- **Algoritmo de Detección / Detection Algorithm:** Comparación de matrices de píxeles en escala de grises con umbrales configurables de diferencia por píxel y sensibilidad global.
-- **Región de Interés (ROI) / Region of Interest:** Definición dinámica de límites de coordenadas (X, Y) para acotar el área de análisis.
-- **Gestión de Eventos / Event Management:** Disparo de alarmas sonoras y registro automático de imágenes de evidencia en disco.
-- **Bitácora de Eventos / Event Log:** Panel de texto de auditoría en tiempo real dentro de la interfaz gráfica.
+FrameDiff Security System watches a webcam feed, detects movement inside a zone you define, and reacts: it sounds an alarm, saves a photo as evidence, and writes the event to a live log.
 
-### English
-- **Video Processing:** Continuous capture and rendering at 640x480 resolution (optimized for cross-platform compatibility).
-- **Detection Algorithm:** Grayscale pixel matrix comparison with configurable per-pixel difference thresholds and global sensitivity.
-- **Region of Interest (ROI):** Dynamic definition of coordinate limits (X, Y) to restrict the analysis area.
-- **Event Management:** Audio alarm triggering and automatic saving of evidence images to disk.
-- **Event Log:** Real-time auditing text panel within the graphical user interface.
+Detection is powered by a **custom frame-differencing engine** that compares consecutive grayscale frames pixel by pixel. The matrix analysis is written from scratch rather than delegated to a computer vision library. The project was developed for the Object-Oriented Programming course at UTP.
 
 ---
 
-## Compatibilidad de Sistemas Operativos / Operating System Compatibility
+## How It Works
 
-### Español
-- **Windows:** Probado y totalmente funcional.
-- **Linux:** Totalmente compatible y probado en entornos de desarrollo.
-- **macOS:** No soportado debido a restricciones de acceso al hardware de captura de video mediante la librería Sarxos en este sistema operativo.
-
-### English
-- **Windows:** Tested and fully functional.
-- **Linux:** Fully compatible and tested in development environments.
-- **macOS:** Not supported due to video capture hardware access restrictions imposed by the Sarxos library on this operating system.
-
----
-
-## Requisitos del Sistema / System Requirements
-
-### Español
-- Kit de Desarrollo de Java (JDK) 17 o superior.
-- Sistemas Operativos compatibles: Windows / Linux.
-- Librerías externas:
-  - Sarxos Webcam API (`webcam-capture-*.jar`)
-  - SLF4J API
-  - BridJ Native Interface
-
-### English
-- Java Development Kit (JDK) 17 or higher.
-- Compatible Operating Systems: Windows / Linux.
-- External Libraries:
-  - Sarxos Webcam API (`webcam-capture-*.jar`)
-  - SLF4J API
-  - BridJ Native Interface
+```text
+  Webcam (640x480)
+        |
+        v
+  Grayscale conversion
+        |
+        v
+  Frame differencing  <--  previous frame
+        |
+        v
+  ROI filter (X, Y limits)
+        |
+        v
+  Threshold check (per-pixel difference + global sensitivity)
+        |
+        +--> Audio alarm        (javax.sound.sampled)
+        +--> Evidence snapshot  (saved to disk)
+        +--> Event log          (real-time panel in the UI)
+```
 
 ---
 
-## Instrucciones de Ejecución / Execution Instructions
+## Features
 
-#### Clonar el repositorio / Clone the repository
+| Feature | Details |
+|---|---|
+| **Live video** | Continuous capture and rendering at 640x480, a resolution chosen for stable cross-platform behavior |
+| **Detection engine** | Grayscale pixel-matrix comparison with configurable per-pixel threshold and global sensitivity |
+| **Region of Interest** | Define X/Y limits to restrict analysis to the area that matters |
+| **Alerts** | Acoustic alarm triggered on intrusion events |
+| **Evidence capture** | Automatic photo saved to disk for every detected event |
+| **Event log** | Real-time audit panel inside the interface |
+
+---
+
+## Architecture
+
+The project is organized in three classes with clearly separated responsibilities.
+
+| Class | Responsibility |
+|---|---|
+| `Main` | Application entry point |
+| `Detector` | Frame-differencing logic, thresholds and ROI filtering |
+| `Ventana` | Swing user interface, video rendering and event log |
+
+| Principle | How it is applied |
+|---|---|
+| **Encapsulation** | Processing, audio/video resources and UI live in separate classes, with protected fields exposed only through accessors |
+| **Separation of concerns** | Motion calculation is fully decoupled from Swing rendering and webcam acquisition |
+| **Exception handling** | I/O and audio device errors are handled explicitly to keep the system stable on Windows and Linux |
+
+---
+
+## Project Structure
+
+```text
+FrameDiff-Security-System/
+├── src/
+│   ├── Main.java        Entry point
+│   ├── Detector.java    Motion detection engine
+│   └── Ventana.java     Graphical user interface
+├── lib/                 External libraries (Sarxos Webcam, SLF4J, BridJ)
+├── recursos/
+│   └── alarma.wav       Alarm sound
+└── README.md
+```
+
+---
+
+## Tech Stack
+
+| Component | Purpose |
+|---|---|
+| **Java 17+** | Core language |
+| **Swing** | Graphical user interface |
+| **Sarxos Webcam API** | Camera capture |
+| **javax.sound.sampled** | Alarm playback |
+| **SLF4J API** | Logging dependency of the webcam library |
+| **BridJ** | Native interface dependency of the webcam library |
+
+---
+
+## Platform Support
+
+| OS | Status |
+|---|---|
+| Windows | Tested and fully functional |
+| Linux | Tested in development environments |
+| macOS | Not supported (camera access restricted by the Sarxos library on this OS) |
+
+---
+
+## Getting Started
+
+**Requirements:** JDK 17 or higher and a connected webcam. The required `.jar` files are already included in the `lib` folder.
+
+**1. Clone the repository**
+
 ```bash
-git clone [https://github.com/JLoayz/FrameDiff-Security-System.git](https://github.com/JLoayz/FrameDiff-Security-System.git)
+git clone https://github.com/JLoayz/FrameDiff-Security-System.git
 cd FrameDiff-Security-System
 ```
+
+**2. Compile**
+
+```bash
+javac -cp "lib/*" -d out src/*.java
+```
+
+**3. Run** (from the project root, so `recursos/alarma.wav` is found)
+
+```bash
+# Linux
+java -cp "out:lib/*" Main
+
+# Windows
+java -cp "out;lib/*" Main
+```
+
+Alternatively, open the project in your IDE (IntelliJ IDEA, Eclipse or NetBeans), add the jars in `lib` to the classpath and run `Main`.
+
 ---
-## Autor / Author
 
-### Español
-Proyecto desarrollado para el curso de Programación Orientada a Objetos.  
-UTP — 2026.
+<details>
+<summary><b>Resumen en español</b></summary>
 
-### English
-Project developed for the Object-Oriented Programming course.  
-UTP — 2026.
+<br>
+
+**FrameDiff Security System** es un sistema de videovigilancia y detección de movimiento en tiempo real, desarrollado en Java como proyecto del curso de Programación Orientada a Objetos (UTP, 2026).
+
+Captura video con la API Sarxos Webcam a 640x480 y analiza los fotogramas con un motor propio de diferencia de fotogramas sobre matrices en escala de grises. Permite delimitar una zona de monitoreo (ROI), dispara una alarma sonora con `javax.sound.sampled`, guarda fotos de evidencia automáticamente y registra cada evento en una bitácora en tiempo real.
+
+**Arquitectura:** tres clases (`Main`, `Detector` y `Ventana`) con encapsulamiento, separación de responsabilidades entre detección, captura e interfaz Swing, y manejo de excepciones de I/O y audio.
+
+**Compatibilidad:** Windows (probado), Linux (probado), macOS (no soportado por restricciones de la librería Sarxos).
+
+**Ejecución:** JDK 17 o superior. Las librerías ya están en la carpeta `lib`. Compila con `javac -cp "lib/*" -d out src/*.java` y ejecuta `Main` desde la raíz del proyecto.
+
+</details>
+
+---
+
+## Author
+
+**Jairo Loayza** | Systems & Computer Science student, UTP, 2026
+
+[LinkedIn](https://www.linkedin.com/in/jairo-loayza)
