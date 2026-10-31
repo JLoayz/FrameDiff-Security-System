@@ -1,0 +1,11 @@
+# Archivos de IntelliJ IDEA
+.idea/
+*.iml
+
+# Archivos compilados de Java
+*.class
+bin/
+out/
+
+# Carpeta de evidencias de video (para que no subas fotos personales)
+Evidencias/
