@@ -12,6 +12,7 @@
 ![Status](https://img.shields.io/badge/Type-Academic%20Project-6E40C9?style=for-the-badge)
 
 </div>
+
 ---
 
 ## Overview
@@ -19,7 +20,7 @@
 FrameDiff Security System watches a webcam feed, detects movement inside a zone you define, and reacts: it sounds an alarm, saves a photo as evidence, writes the event to a live log and records it in a SQL Server database.
 
 Detection is powered by a **custom frame-differencing engine** that compares consecutive grayscale frames pixel by pixel. The matrix analysis is written from scratch rather than delegated to a computer vision library. The project was developed for the Object-Oriented Programming course at UTP.
- 
+
 ---
 
 ## How It Works
@@ -44,7 +45,7 @@ Detection is powered by a **custom frame-differencing engine** that compares con
         +--> Evidence snapshot  (saved to disk, at most once every 5 s)
         +--> Database record    (SQL Server, written on a background thread)
 ```
- 
+
 ---
 
 ## Features
@@ -60,7 +61,7 @@ Detection is powered by a **custom frame-differencing engine** that compares con
 | **Database logging** | Each detection (date, movement level and photo path) is stored in SQL Server through JDBC |
 | **Non-blocking writes** | Database inserts run on a dedicated thread, so the video never freezes |
 | **Cooldown** | Photos and database records are limited to one every 5 seconds, so continuous movement does not flood the system |
- 
+
 ---
 
 ## Architecture
@@ -81,7 +82,7 @@ The project is organized in four classes with clearly separated responsibilities
 | **Exception handling** | I/O, audio and database errors are handled explicitly; a database failure never stops the surveillance |
 | **Safe queries** | Inserts use `PreparedStatement`, so values are never concatenated into the SQL text |
 | **Secrets outside the code** | Database credentials live in `config.properties`, which Git ignores |
- 
+
 ---
 
 ## Project Structure
@@ -103,7 +104,7 @@ FrameDiff-Security-System/
 ```
 
 `config.properties` (your real credentials) and the `Evidencias/` folder (captured photos) are created locally and are not part of the repository.
- 
+
 ---
 
 ## Tech Stack
@@ -118,7 +119,7 @@ FrameDiff-Security-System/
 | **Microsoft JDBC Driver (mssql-jdbc)** | Connection between Java and SQL Server |
 | **SLF4J API** | Logging dependency of the webcam library |
 | **BridJ** | Native interface dependency of the webcam library |
- 
+
 ---
 
 ## Platform Support
@@ -128,7 +129,7 @@ FrameDiff-Security-System/
 | Windows | Tested and fully functional |
 | Linux | Tested in development environments |
 | macOS | Not supported (camera access restricted by the Sarxos library on this OS) |
- 
+
 ---
 
 ## Getting Started
@@ -140,7 +141,8 @@ FrameDiff-Security-System/
 - A connected webcam
 - SQL Server with TCP/IP enabled (default port 1433) and a login with SQL Server authentication
 - The Sarxos Webcam and `mssql-jdbc` jars are already included in the `lib` folder
-  **1. Clone the repository**
+
+**1. Clone the repository**
 
 ```bash
 git clone https://github.com/JLoayz/FrameDiff-Security-System.git
@@ -178,23 +180,25 @@ From the project root, so `config.properties` is found. Replace `/path/to/javafx
 # Compile
 javac --module-path /path/to/javafx/lib --add-modules javafx.controls,javafx.swing \
       -cp "lib/*" -d out src/*.java
- 
+
 # Run (Linux)
 java --module-path /path/to/javafx/lib --add-modules javafx.controls,javafx.swing \
      -cp "out:recursos:lib/*" Main
- 
+
 # Run (Windows: use ; as the classpath separator)
 java --module-path C:\path\to\javafx\lib --add-modules javafx.controls,javafx.swing ^
      -cp "out;recursos;lib/*" Main
 ```
 
 Alternatively, open the project in your IDE (IntelliJ IDEA, Eclipse or NetBeans), add the jars in `lib` and the JavaFX SDK to the project, mark `recursos` as a resources folder and run `Main`.
- 
+
 ---
 
 <details>
 <summary><b>Resumen en español</b></summary>
+
 <br>
+
 **FrameDiff Security System** es un sistema de videovigilancia y detección de movimiento en tiempo real, desarrollado en Java como proyecto del curso de Programación Orientada a Objetos (UTP, 2026).
 
 Captura video con la API Sarxos Webcam a 640x480 y analiza los fotogramas con un motor propio de diferencia de fotogramas sobre matrices en escala de grises. Permite delimitar una zona de monitoreo (ROI), dispara una alarma sonora con `javax.sound.sampled`, guarda fotos de evidencia automáticamente, registra cada evento en una bitácora en tiempo real y lo almacena en una base de datos SQL Server.
@@ -211,7 +215,9 @@ Captura video con la API Sarxos Webcam a 640x480 y analiza los fotogramas con un
 2. Ejecuta `schema.sql` para crear la base `SecuritySystem` y la tabla `SystemLogs`.
 3. Copia `config.example.properties` como `config.properties` y rellena tu usuario y contraseña. Este archivo no se sube a GitHub.
 4. Compila y ejecuta `Main` desde la raíz del proyecto, como se muestra en la sección *Getting Started*.
+
 </details>
+
 ---
 
 ## Author
