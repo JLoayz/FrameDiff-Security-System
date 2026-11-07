@@ -1,6 +1,7 @@
+import javafx.application.Application;
+
 public class Main {
     public static void main(String[] args) {
-        Ventana ventana = new Ventana();
-        ventana.setVisible(true);
+        Application.launch(Ventana.class, args);
     }
 }

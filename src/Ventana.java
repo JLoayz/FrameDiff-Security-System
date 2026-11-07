@@ -1,36 +1,168 @@
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
+import javafx.application.*;
+import javafx.embed.swing.SwingFXUtils;
+import javafx.geometry.*;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.image.*;
+import javafx.scene.layout.*;
+import javafx.stage.Stage;
+import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.image.BufferedImage;
-import com.github.sarxos.webcam.Webcam;
 import java.io.File;
+import java.util.concurrent.*;
 import javax.imageio.ImageIO;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
-import javax.swing.border.EmptyBorder;
+import javax.sound.sampled.*;
+import com.github.sarxos.webcam.Webcam;
 
-public class Ventana extends JFrame {
-    private JLabel lblVideo;
-    private JLabel lblEstado;
-    private JButton btnEncender;
-    private JTextArea zonaBitacora;
-    private JTextField txtInicioX, txtFinX, txtInicioY, txtFinY;
+public class Ventana extends Application {
+    private ImageView vistaVideo;
+    private Label lblVideo;
+    private Label lblEstado;
+    private Button btnEncender;
+    private TextArea zonaBitacora;
+    private TextField txtInicioX, txtFinX, txtInicioY, txtFinY;
+
+    private volatile String valInicioX = "0";
+    private volatile String valFinX = "640";
+    private volatile String valInicioY = "0";
+    private volatile String valFinY = "480";
 
     private Webcam camara;
-    private boolean sistemaActivo = false;
+    private volatile boolean sistemaActivo = false;
     private Detector detector;
     private BufferedImage fotoAnterior;
     private Clip sonidoAlarma;
+    private final DeteccionDAO dao = new DeteccionDAO();
+    private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
+    private long ultimoRegistro = 0;
+    private static final long ENFRIAMIENTO_MS = 5000;
 
-    public Ventana() {
-        setTitle("Sistema de video-vigilancia");
-        setSize(1000,700);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    public void start(Stage escenario) {
+        escenario.setTitle("Sistema de video-vigilancia");
 
         detector = new Detector();
+        cargarAudio();
 
+        Label titulo = new Label("VIDEO-VIGILANCIA");
+        titulo.setId("titulo");
+        HBox panelTitulo = new HBox(titulo);
+        panelTitulo.setAlignment(Pos.CENTER);
+        panelTitulo.setPadding(new Insets(15, 0, 5, 0));
+
+        lblVideo = new Label("[ CÁMARA APAGADA ]");
+        lblVideo.setId("lbl-video");
+        vistaVideo = new ImageView();
+        vistaVideo.setFitWidth(640);
+        vistaVideo.setFitHeight(480);
+        vistaVideo.setPreserveRatio(true);
+
+        StackPane panelVideo = new StackPane(lblVideo, vistaVideo);
+        panelVideo.setPrefSize(640, 480);
+        panelVideo.setId("panel-video");
+        panelVideo.setMaxSize(640, 480);
+
+        zonaBitacora = new TextArea();
+        zonaBitacora.setEditable(false);
+        zonaBitacora.setPrefWidth(260);
+        zonaBitacora.setMinWidth(260);
+        zonaBitacora.setWrapText(true);
+        zonaBitacora.setPrefRowCount(10);
+        zonaBitacora.setId("bitacora");
+
+        txtInicioX = new TextField("0");
+        txtFinX = new TextField("640");
+        txtInicioY = new TextField("0");
+        txtFinY = new TextField("480");
+
+        txtInicioX.textProperty().addListener((obs, a, n) -> valInicioX = n);
+        txtFinX.textProperty().addListener((obs, a, n) -> valFinX = n);
+        txtInicioY.textProperty().addListener((obs, a, n) -> valInicioY = n);
+        txtFinY.textProperty().addListener((obs, a, n) -> valFinY = n);
+
+        VBox panelIzq = new VBox(6,
+                etiqueta("X Inicial"), txtInicioX,
+                etiqueta("X Final"), txtFinX,
+                etiqueta("Y Inicial"), txtInicioY,
+                etiqueta("Y Final"), txtFinY);
+        panelIzq.setPadding(new Insets(14));
+        panelIzq.setPrefWidth(130);
+        panelIzq.getStyleClass().add("panel-lateral");
+        BorderPane.setMargin(panelIzq, new Insets(10));
+
+        btnEncender = new Button("ENCENDER");
+        btnEncender.setId("btn-encender");
+        lblEstado = new Label("ESTADO: Cámara Apagada");
+        lblEstado.setId("lbl-estado");
+        HBox panelInferior = new HBox(20, btnEncender, lblEstado);
+        panelInferior.setAlignment(Pos.CENTER);
+        panelInferior.setPadding(new Insets(15));
+
+        btnEncender.setOnAction(e -> interruptor());
+
+        BorderPane.setMargin(panelVideo, new Insets(10));
+        BorderPane.setMargin(zonaBitacora, new Insets(10));
+
+        BorderPane raiz = new BorderPane();
+        raiz.setId("raiz");
+        raiz.setTop(panelTitulo);
+        raiz.setCenter(panelVideo);
+        raiz.setRight(zonaBitacora);
+        raiz.setLeft(panelIzq);
+        raiz.setBottom(panelInferior);
+
+        Scene escena = new Scene(raiz);
+        java.net.URL urlCss = getClass().getResource("/estilos.css");
+        if (urlCss != null) {
+            escena.getStylesheets().add(urlCss.toExternalForm());
+        } else {
+            System.out.println("ERROR. No se encontró estilos.css en la carpeta de recursos.");
+        }
+
+        escenario.setScene(escena);
+        escenario.show();
+        escenario.setMinWidth(escenario.getWidth());
+        escenario.setMinHeight(escenario.getHeight());
+        escenario.centerOnScreen();
+    }
+
+    private Label etiqueta(String texto) {
+        Label l = new Label(texto);
+        l.getStyleClass().add("etiqueta");
+        return l;
+    }
+
+    private void ponerAlerta(boolean activa) {
+        lblEstado.getStyleClass().remove("alerta");
+        if (activa) {
+            lblEstado.getStyleClass().add("alerta");
+        }
+    }
+
+    @Override
+    public void stop() {
+        sistemaActivo = false;
+        if (camara != null && camara.isOpen()) {
+            camara.close();
+        }
+        if (sonidoAlarma != null) {
+            sonidoAlarma.close();
+        }
+
+        dbExecutor.shutdown();
+        try {
+            dbExecutor.awaitTermination(2, TimeUnit.SECONDS);
+        } catch (InterruptedException ignorada) {
+        }
+
+        System.exit(0);
+    }
+
+    private void cargarAudio() {
         try {
             java.net.URL urlAudio = getClass().getResource("/alarma.wav");
 
@@ -44,77 +176,40 @@ public class Ventana extends JFrame {
         } catch (Exception error) {
             System.out.println("ERROR al procesar el audio: " + error.getMessage());
         }
-
-        lblVideo = new JLabel("[ CÁMARA APAGADA ]", SwingConstants.CENTER);
-        lblVideo.setPreferredSize(new Dimension(640,480));
-        lblVideo.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        add(lblVideo, BorderLayout.CENTER);
-
-        zonaBitacora = new JTextArea(10, 30);
-        zonaBitacora.setEditable(false);
-        JScrollPane scroll = new JScrollPane(zonaBitacora);
-        add(scroll, BorderLayout.EAST);
-
-        txtInicioX = new JTextField("0");
-        txtFinX = new JTextField("640");
-        txtInicioY = new JTextField("0");
-        txtFinY = new JTextField("480");
-
-        JPanel panelIzq = new JPanel();
-        panelIzq.setLayout(new BoxLayout(panelIzq, BoxLayout.Y_AXIS));
-        panelIzq.setBorder(new EmptyBorder(10,10,10,10));
-        panelIzq.add(new JLabel("X Inicial"));
-        panelIzq.add(txtInicioX);
-        panelIzq.add(new JLabel("X Final"));
-        panelIzq.add(txtFinX);
-        panelIzq.add(new JLabel("Y Inicial"));
-        panelIzq.add(txtInicioY);
-        panelIzq.add(new JLabel("Y Final"));
-        panelIzq.add(txtFinY);
-        panelIzq.add(Box.createRigidArea(new Dimension(0, 350)));
-        add(panelIzq, BorderLayout.WEST);
-
-        JPanel panelInferior = new JPanel(new FlowLayout());
-        btnEncender = new JButton("ENCENDER");
-        lblEstado = new JLabel("ESTADO: Cámara Apagada");
-        panelInferior.add(btnEncender);
-        panelInferior.add(lblEstado);
-        add(panelInferior, BorderLayout.SOUTH);
-
-        btnEncender.addActionListener(new ActionListener() {
-            public void actionPerformed (ActionEvent alternarSistema) {
-                interruptor();
-            }
-        });
     }
 
-    private void interruptor () {
+    private void interruptor() {
         if (!sistemaActivo) {
             camara = Webcam.getDefault();
             if (camara != null) {
                 camara.setViewSize(new Dimension(640, 480));
                 camara.open();
                 sistemaActivo = true;
+                fotoAnterior = null;
                 btnEncender.setText("APAGAR");
+                btnEncender.getStyleClass().add("activo");
+                ponerAlerta(false);
                 lblEstado.setText("ESTADO: Cámara Encendida");
-                zonaBitacora.append("* SISTEMA INICIALIZADO\n");
+                lblVideo.setVisible(false);
+                zonaBitacora.appendText("* SISTEMA INICIALIZADO\n");
 
-                Thread hiloCamara = new Thread(new Runnable() {
-                    public void run() {
-                        bucleCamara();
-                    }
-                });
+                Thread hiloCamara = new Thread(this::bucleCamara);
+                hiloCamara.setDaemon(true);
                 hiloCamara.start();
             } else {
-                JOptionPane.showMessageDialog(this, "ERROR. No se detectó ninguna cámara.");
+                Alert alerta = new Alert(Alert.AlertType.ERROR, "ERROR. No se detectó ninguna cámara.");
+                alerta.showAndWait();
             }
         } else {
             sistemaActivo = false;
             camara.close();
-            lblVideo.setIcon(null);
-            lblVideo.setText("[ CÁMARA APAGADA ]");
+            vistaVideo.setImage(null);
+            lblVideo.setVisible(true);
             btnEncender.setText("ENCENDER");
-            zonaBitacora.append("* SISTEMA Detenido\n");
+            btnEncender.getStyleClass().remove("activo");
+            ponerAlerta(false);
+            lblEstado.setText("ESTADO: Cámara Apagada");
+            zonaBitacora.appendText("* SISTEMA Detenido\n");
         }
     }
 
@@ -124,10 +219,10 @@ public class Ventana extends JFrame {
 
             if (fotoActual != null) {
                 try {
-                    detector.xInicio = Integer.parseInt(txtInicioX.getText());
-                    detector.xFin = Integer.parseInt(txtFinX.getText());
-                    detector.yInicio = Integer.parseInt(txtInicioY.getText());
-                    detector.yFin = Integer.parseInt(txtFinY.getText());
+                    detector.xInicio = Integer.parseInt(valInicioX);
+                    detector.xFin = Integer.parseInt(valFinX);
+                    detector.yInicio = Integer.parseInt(valInicioY);
+                    detector.yFin = Integer.parseInt(valFinY);
                 } catch (NumberFormatException numeroNoValido) {
                     detector.xInicio = 0;
                     detector.xFin = 640;
@@ -138,19 +233,33 @@ public class Ventana extends JFrame {
                 int anchoRectangulo = detector.xFin - detector.xInicio;
                 int altoRectangulo = detector.yFin - detector.yInicio;
                 Graphics zonaActiva = fotoActual.getGraphics();
-                zonaActiva.setColor(Color.green);
+                zonaActiva.setColor(java.awt.Color.green);
                 zonaActiva.drawRect(detector.xInicio, detector.yInicio, anchoRectangulo, altoRectangulo);
                 zonaActiva.dispose();
 
-                lblVideo.setIcon(new ImageIcon(fotoActual));
+                Image imagenFx = SwingFXUtils.toFXImage(fotoActual, null);
+                Platform.runLater(() -> {
+                    if (sistemaActivo) {
+                        vistaVideo.setImage(imagenFx);
+                    }
+                });
 
                 double nivelMovimiento = detector.calcularPorcentajeMovimiento(fotoActual, fotoAnterior);
                 if (nivelMovimiento > detector.getUmbralSensibilidad()) {
-                    lblEstado.setText("ALERTA: Movmiento detectado (" + String.format("%.2f", nivelMovimiento) + "%)");
-                    zonaBitacora.append("Movimiento inusual detectado.\n");
+                    String texto = "ALERTA: Movmiento detectado (" + String.format("%.2f", nivelMovimiento) + "%)";
+                    Platform.runLater(() -> {
+                        ponerAlerta(true);
+                        lblEstado.setText(texto);
+                        zonaBitacora.appendText("Movimiento inusual detectado.\n");
+                    });
 
                     sonarAlarma();
-                    guardarFoto(fotoActual);
+                    long ahora = System.currentTimeMillis();
+                    if (ahora - ultimoRegistro >= ENFRIAMIENTO_MS) {
+                        ultimoRegistro = ahora;
+                        String ruta = guardarFoto(fotoActual);
+                        dbExecutor.submit(() -> dao.guardarDeteccion(nivelMovimiento, ruta));
+                    }
                 }
                 fotoAnterior = fotoActual;
             }
@@ -172,7 +281,7 @@ public class Ventana extends JFrame {
         sonidoAlarma.start();
     }
 
-    private void guardarFoto(BufferedImage img) {
+    private String guardarFoto(BufferedImage img) {
         try {
             File carpeta = new File("Evidencias");
             if (!carpeta.exists()) carpeta.mkdir();
@@ -182,9 +291,11 @@ public class Ventana extends JFrame {
 
             File salida = new File(carpeta, "evidencia_" + nombreImagen + ".png");
             ImageIO.write(img, "png", salida);
+            return salida.getAbsolutePath();
 
         } catch (Exception e) {
             System.out.println("ERROR. Algo salió al guardar la imagen.");
+            return null;
         }
     }
 }

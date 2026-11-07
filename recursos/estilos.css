@@ -1,0 +1,100 @@
+/* ===== Base ===== */
+#raiz {
+    -fx-background-color: #1e2227;
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-size: 13px;
+}
+
+/* ===== Título ===== */
+#titulo {
+    -fx-text-fill: #d7dae0;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1px;
+}
+
+/* ===== Panel del video ===== */
+#panel-video {
+    -fx-background-color: #000000;
+    -fx-border-color: #3a3f47;
+    -fx-border-width: 1;
+}
+
+#lbl-video {
+    -fx-text-fill: #6b717b;
+    -fx-font-size: 14px;
+}
+
+/* ===== Panel lateral (coordenadas) ===== */
+.panel-lateral {
+    -fx-background-color: #262a30;
+    -fx-border-color: #3a3f47;
+    -fx-border-width: 1;
+}
+
+.etiqueta {
+    -fx-text-fill: #9aa0aa;
+    -fx-font-size: 12px;
+}
+
+.text-field {
+    -fx-background-color: #1a1d21;
+    -fx-text-fill: #d7dae0;
+    -fx-border-color: #3a3f47;
+    -fx-border-width: 1;
+    -fx-background-radius: 2;
+    -fx-border-radius: 2;
+}
+
+.text-field:focused {
+    -fx-border-color: #5b8db8;
+}
+
+/* ===== Bitácora ===== */
+#bitacora {
+    -fx-control-inner-background: #16181c;
+    -fx-text-fill: #c4c9d1;
+    -fx-font-family: "Consolas", "Monospaced";
+    -fx-font-size: 12px;
+    -fx-border-color: #3a3f47;
+    -fx-border-width: 1;
+}
+
+/* ===== Botón principal ===== */
+#btn-encender {
+    -fx-background-color: #3a4350;
+    -fx-text-fill: #e4e7ec;
+    -fx-font-weight: bold;
+    -fx-background-radius: 3;
+    -fx-padding: 7 22 7 22;
+    -fx-cursor: hand;
+}
+
+#btn-encender:hover {
+    -fx-background-color: #465163;
+}
+
+#btn-encender.activo {
+    -fx-background-color: #7a3b3b;
+}
+
+#btn-encender.activo:hover {
+    -fx-background-color: #8d4646;
+}
+
+/* ===== Barra de estado ===== */
+#lbl-estado {
+    -fx-text-fill: #b4bac4;
+    -fx-font-size: 13px;
+}
+
+#lbl-estado.alerta {
+    -fx-text-fill: #e07a7a;
+    -fx-font-weight: bold;
+}
+
+/* ===== Scrollbars discretas ===== */
+.scroll-bar .thumb {
+    -fx-background-color: #3a3f47;
+    -fx-background-radius: 3;
+}
