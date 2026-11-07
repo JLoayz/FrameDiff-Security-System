@@ -1,4 +1,5 @@
 <div align="center">
+
 # FrameDiff Security System
 
 **Real-time motion detection and video surveillance, built from scratch in Java.**
