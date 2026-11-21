@@ -6,7 +6,7 @@
 
 ![Java](https://img.shields.io/badge/Java-17+-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 ![JavaFX](https://img.shields.io/badge/UI-JavaFX-4B8BBE?style=for-the-badge)
-![Webcam](https://img.shields.io/badge/Capture-Sarxos%20Webcam-2EA44F?style=for-the-badge)
+![Webcam](https://img.shields.io/badge/Capture-Webcam%20%26%20WiFi%20IP-2EA44F?style=for-the-badge)
 ![SQL Server](https://img.shields.io/badge/Database-SQL%20Server-CC2927?style=for-the-badge&logo=microsoftsqlserver&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-0A66C2?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Type-Academic%20Project-6E40C9?style=for-the-badge)
@@ -17,33 +17,43 @@
 
 ## Overview
 
-FrameDiff Security System watches a webcam feed, detects movement inside a zone you define, and reacts: it sounds an alarm, saves a photo as evidence, writes the event to a live log and records it in a SQL Server database.
+FrameDiff Security System monitors video feeds, detects movement inside a user-defined zone, and reacts: it sounds an acoustic alarm, captures photo evidence, writes the event to an interactive live log, and records the event in a SQL Server database.
 
-Detection is powered by a **custom frame-differencing engine** that compares consecutive grayscale frames pixel by pixel. The matrix analysis is written from scratch rather than delegated to a computer vision library. The project was developed for the Object-Oriented Programming course at UTP.
+Detection is powered by a **custom frame-differencing engine** that compares consecutive grayscale frames pixel by pixel without depending on heavy third-party computer vision libraries.
+
+The system supports **multiple video sources**:
+1. **Local cameras** (integrated laptop webcams and USB webcams).
+2. **Remote WiFi / IP cameras** (smartphones running IP webcam applications or dedicated network cameras) streaming MJPEG over HTTP.
+
+Developed for the Object-Oriented Programming course at Universidad Tecnológica del Perú (UTP).
 
 ---
 
 ## How It Works
 
 ```text
-  Webcam (640x480)
-        |
-        v
-  Grayscale conversion
-        |
-        v
-  Frame differencing  <--  previous frame
-        |
-        v
-  ROI filter (X, Y limits)
-        |
-        v
-  Threshold check (per-pixel difference + global sensitivity)
-        |
-        +--> Audio alarm        (javax.sound.sampled)
-        +--> Event log          (real-time panel in the UI)
-        +--> Evidence snapshot  (saved to disk, at most once every 5 s)
-        +--> Database record    (SQL Server, written on a background thread)
+  Video Source: Local Webcam or Remote WiFi / IP Camera (MJPEG)
+                           |
+                           v
+          Dynamic Aspect Ratio & Auto-Resolution
+                           |
+                           v
+                  Grayscale conversion
+                           |
+                           v
+           Frame differencing  <--  previous frame
+                           |
+                           v
+                ROI filter (X, Y limits)
+                           |
+                           v
+        Threshold check (per-pixel difference + sensitivity)
+                           |
+         +-----------------+-----------------+-----------------+
+         |                 |                 |                 |
+         v                 v                 v                 v
+    Audio alarm        Event log      Evidence snapshot  Database record
+(javax.sound.sampled)  (live UI)    (disk, max 1 / 5s)  (SQL Server via JDBC)
 ```
 
 ---
@@ -52,36 +62,97 @@ Detection is powered by a **custom frame-differencing engine** that compares con
 
 | Feature | Details |
 |---|---|
-| **Live video** | Continuous capture and rendering at 640x480, a resolution chosen for stable cross-platform behavior |
-| **Detection engine** | Grayscale pixel-matrix comparison with configurable per-pixel threshold and global sensitivity |
-| **Region of Interest** | Define X/Y limits to restrict analysis to the area that matters |
-| **Alerts** | Acoustic alarm triggered on intrusion events |
-| **Evidence capture** | Automatic photo saved to disk when movement is detected |
-| **Event log** | Real-time audit panel inside the interface |
-| **Database logging** | Each detection (date, movement level and photo path) is stored in SQL Server through JDBC |
-| **Non-blocking writes** | Database inserts run on a dedicated thread, so the video never freezes |
-| **Cooldown** | Photos and database records are limited to one every 5 seconds, so continuous movement does not flood the system |
+| **Multi-Source Video** | Supports local integrated/USB webcams and remote WiFi/IP cameras (e.g. smartphones) seamlessly |
+| **Camera Persistence** | Save and delete configured WiFi/IP cameras with automatic local persistence in `camaras.properties` |
+| **Detection Engine** | Custom pixel-matrix difference calculation with configurable per-pixel delta and global sensitivity |
+| **Dynamic ROI** | Real-time Region of Interest adaptation; bounds adjust automatically to the connected camera's resolution |
+| **Aspect Ratio Preservation** | Feeds (16:9 widescreen or 4:3 standard) scale cleanly without distortion or clipping |
+| **Acoustic Alerts** | Audio alarm triggered immediately on intrusion events |
+| **Evidence Capture** | Automated snapshot saved to disk under `Evidencias/` when movement is verified |
+| **Event Log** | Real-time audit panel in the interface documenting initialization, camera switches and alerts |
+| **Database Logging** | Every detection (timestamp, movement percentage, evidence path) is persisted in SQL Server |
+| **Non-blocking Execution** | Database operations and network video streaming run on dedicated background threads |
+| **Anti-flood Cooldown** | Disk writes and database records are throttled to at most one every 5 seconds |
 
 ---
 
-## Architecture
+## OOP Architecture
 
-The project is organized in four classes with clearly separated responsibilities.
+The project emphasizes core Object-Oriented Programming design principles: **Polymorphism**, **Abstraction**, **Encapsulation**, and the **Dependency Inversion Principle (DIP)**.
 
-| Class | Responsibility |
-|---|---|
-| `Main` | Application entry point |
-| `Detector` | Frame-differencing logic, thresholds and ROI filtering |
-| `Ventana` | JavaFX user interface, video rendering, event log and camera loop |
-| `DeteccionDAO` | Data access: reads the connection settings and inserts detections into SQL Server |
+```mermaid
+classDiagram
+    class FuenteCamara {
+        <<interface>>
+        +abrir()
+        +cerrar()
+        +capturarFrame() BufferedImage
+        +estaAbierta() boolean
+        +getNombre() String
+    }
 
-| Principle | How it is applied |
-|---|---|
-| **Encapsulation** | Processing, audio/video resources, UI and database access live in separate classes, with protected fields exposed only through accessors |
-| **Separation of concerns** | Motion calculation is decoupled from JavaFX rendering and webcam acquisition, and the UI knows nothing about SQL: it only asks the DAO to save a detection |
-| **Exception handling** | I/O, audio and database errors are handled explicitly; a database failure never stops the surveillance |
-| **Safe queries** | Inserts use `PreparedStatement`, so values are never concatenated into the SQL text |
-| **Secrets outside the code** | Database credentials live in `config.properties`, which Git ignores |
+    class CamaraLocal {
+        -Webcam webcam
+        +abrir()
+        +cerrar()
+        +capturarFrame() BufferedImage
+        +obtenerCamarasDisponibles() List
+    }
+
+    class CamaraIP {
+        -String urlStream
+        -Thread hiloLector
+        +abrir()
+        +cerrar()
+        +capturarFrame() BufferedImage
+    }
+
+    class GestorCamaras {
+        +cargarCamarasGuardadas() List
+        +agregarCamara(CamaraIP)
+        +eliminarCamara(String)
+    }
+
+    class Detector {
+        -int umbralPixel
+        -double umbralSensibilidad
+        +calcularPorcentajeMovimiento(imgActual, imgAnterior) double
+    }
+
+    class Ventana {
+        -FuenteCamara camaraActual
+        -Detector detector
+        -DeteccionDAO dao
+        +start(Stage)
+        -bucleCamara()
+    }
+
+    FuenteCamara <|.. CamaraLocal : implements
+    FuenteCamara <|.. CamaraIP : implements
+    Ventana --> FuenteCamara : uses (polymorphism)
+    Ventana --> Detector : uses
+    Ventana ..> GestorCamaras : uses
+```
+
+### Class Responsibilities
+
+| Class / Interface | Type | Responsibility |
+|---|---|---|
+| `FuenteCamara` | Interface | Common abstraction for any video input device (local or network) |
+| `CamaraLocal` | Class | Concrete implementation wrapping local webcams via Sarxos Webcam API |
+| `CamaraIP` | Class | Concrete implementation handling remote MJPEG/HTTP streams with concurrent frame retrieval |
+| `GestorCamaras` | Class | Manages persistence (save, load, delete) for configured network cameras |
+| `Detector` | Class | Custom matrix difference engine, threshold checks and dynamic ROI boundaries |
+| `Ventana` | Class | JavaFX graphical interface, camera selector, real-time rendering and event management |
+| `DeteccionDAO` | Class | Data Access Object: connects via JDBC and asynchronously inserts detection logs |
+| `Main` | Class | Application entry point |
+
+### Principles in Action
+
+* **Polymorphism & Inversion of Control:** `Ventana` interacts exclusively with the `FuenteCamara` interface. It does not know or care whether a feed comes from a USB webcam or a smartphone streaming across the local WiFi network.
+* **Separation of Concerns:** Video acquisition, image processing (`Detector`), data persistence (`DeteccionDAO`), and graphical presentation (`Ventana`) are decoupled.
+* **Concurrency & Non-blocking I/O:** MJPEG network stream parsing runs in a daemon thread inside `CamaraIP` to avoid UI stutter and prevent frame buffer accumulation. Database writes are handled on a separate `ExecutorService`.
+* **Safe Secrets & Environment Isolation:** Database connection details and camera network URLs are decoupled from the code in `.properties` files ignored by Git.
 
 ---
 
@@ -90,96 +161,67 @@ The project is organized in four classes with clearly separated responsibilities
 ```text
 FrameDiff-Security-System/
 ├── src/
-│   ├── Main.java                   Entry point
-│   ├── Detector.java               Motion detection engine
-│   ├── Ventana.java                Graphical user interface
-│   └── DeteccionDAO.java           Database access (JDBC)
-├── lib/                            External libraries (Sarxos Webcam, SLF4J, BridJ, mssql-jdbc)
+│   ├── Main.java                   # Entry point
+│   ├── FuenteCamara.java           # Video source interface (Abstraction)
+│   ├── CamaraLocal.java            # Local webcam implementation
+│   ├── CamaraIP.java               # Network/WiFi camera implementation (MJPEG)
+│   ├── GestorCamaras.java          # Camera persistence manager
+│   ├── Detector.java               # Motion detection engine
+│   ├── Ventana.java                # Graphical user interface (JavaFX)
+│   └── DeteccionDAO.java           # Database access layer (JDBC)
+├── lib/                            # External dependencies (Sarxos, SLF4J, BridJ, mssql-jdbc)
 ├── recursos/
-│   ├── alarma.wav                  Alarm sound
-│   └── estilos.css                 Interface styles
-├── schema.sql                      Database and table creation script
-├── config.example.properties       Connection settings template
+│   ├── alarma.wav                  # Acoustic alert sample
+│   └── estilos.css                 # Dark Gruvbox-inspired UI stylesheet
+├── schema.sql                      # SQL Server database creation script
+├── config.example.properties       # Database configuration template
+├── camaras.example.properties      # Network camera list template
 └── README.md
 ```
-
-`config.properties` (your real credentials) and the `Evidencias/` folder (captured photos) are created locally and are not part of the repository.
-
----
-
-## Tech Stack
-
-| Component | Purpose |
-|---|---|
-| **Java 17+** | Core language |
-| **JavaFX** | Graphical user interface |
-| **Sarxos Webcam API** | Camera capture |
-| **javax.sound.sampled** | Alarm playback |
-| **SQL Server** | Storage of detection records |
-| **Microsoft JDBC Driver (mssql-jdbc)** | Connection between Java and SQL Server |
-| **SLF4J API** | Logging dependency of the webcam library |
-| **BridJ** | Native interface dependency of the webcam library |
-
----
-
-## Platform Support
-
-| OS | Status |
-|---|---|
-| Windows | Tested and fully functional |
-| Linux | Tested in development environments |
-| macOS | Not supported (camera access restricted by the Sarxos library on this OS) |
 
 ---
 
 ## Getting Started
 
-**Requirements**
+### Prerequisites
+* JDK 17 or higher
+* [JavaFX SDK](https://openjfx.io/) (matching your JDK version)
+* SQL Server with TCP/IP enabled (default port: 1433)
+* A local webcam or a mobile phone connected to the same WiFi network
 
-- JDK 17 or higher
-- [JavaFX SDK](https://openjfx.io/) (not bundled with the JDK; download it separately)
-- A connected webcam
-- SQL Server with TCP/IP enabled (default port 1433) and a login with SQL Server authentication
-- The Sarxos Webcam and `mssql-jdbc` jars are already included in the `lib` folder
+---
 
-**1. Clone the repository**
+### Step 1: Clone and Prepare Configuration
 
 ```bash
 git clone https://github.com/JLoayz/FrameDiff-Security-System.git
 cd FrameDiff-Security-System
 ```
 
-**2. Create the database**
+1. **Database configuration:** Copy `config.example.properties` to `config.properties` and add your database credentials:
+   ```properties
+   db.url=jdbc:sqlserver://localhost:1433;databaseName=SecuritySystem;encrypt=true;trustServerCertificate=true
+   db.user=YOUR_USER
+   db.password=YOUR_PASSWORD
+   ```
+2. **Database setup:** Execute `schema.sql` in SQL Server (SSMS, Azure Data Studio, DBeaver or `sqlcmd`) to create the database and `SystemLogs` table.
 
-Run `schema.sql` in your SQL Server (with DBeaver, SSMS, `sqlcmd` or similar). It creates the `SecuritySystem` database and the `SystemLogs` table:
+---
 
-| Column | Type | Description |
-|---|---|---|
-| `id_log` | `INT IDENTITY` | Unique id, generated automatically |
-| `date_time` | `DATETIME2` | Moment of the detection, filled in by SQL Server |
-| `movement_level` | `FLOAT` | Percentage of pixels that changed |
-| `image_path` | `NVARCHAR(500)` | Path of the evidence photo on disk |
+### Step 2: Running the Application
 
-**3. Configure the connection**
+#### Option A: Using your IDE (Recommended)
+1. Open the project in IntelliJ IDEA, Eclipse, or NetBeans.
+2. Ensure the JDK is set to 17+.
+3. Add the `.jar` files in the `lib` folder and the JavaFX SDK to the project dependencies.
+4. Mark `recursos` as a **Resources Root**.
+5. Run `Main.java`.
 
-Copy `config.example.properties` to `config.properties` (in the project root) and fill in your data:
-
-```properties
-db.url=jdbc:sqlserver://localhost:1433;databaseName=SecuritySystem;encrypt=true;trustServerCertificate=true
-db.user=YOUR_USER
-db.password=YOUR_PASSWORD
-```
-
-Properties in the URL are separated by `;`. For a named instance (for example SQL Server Express), use `jdbc:sqlserver://localhost;instanceName=SQLEXPRESS;databaseName=SecuritySystem;...`. `trustServerCertificate=true` is meant for local development only.
-
-**4. Run**
-
-From the project root, so `config.properties` is found. Replace `/path/to/javafx/lib` with the `lib` folder of your JavaFX SDK.
-
+#### Option B: From Command Line
 ```bash
 # Compile
 javac --module-path /path/to/javafx/lib --add-modules javafx.controls,javafx.swing \
-      -cp "lib/*" -d out src/*.java
+      -cp "lib/*:src" -d out src/*.java
 
 # Run (Linux)
 java --module-path /path/to/javafx/lib --add-modules javafx.controls,javafx.swing \
@@ -190,7 +232,15 @@ java --module-path C:\path\to\javafx\lib --add-modules javafx.controls,javafx.sw
      -cp "out;recursos;lib/*" Main
 ```
 
-Alternatively, open the project in your IDE (IntelliJ IDEA, Eclipse or NetBeans), add the jars in `lib` and the JavaFX SDK to the project, mark `recursos` as a resources folder and run `Main`.
+---
+
+### Step 3: Connecting a WiFi / IP Camera (Smartphone)
+
+1. Install an app like **IP Webcam** (Android) or **IP Camera Lite** (iOS).
+2. Connect your phone to the same WiFi network as your laptop.
+3. Start the server in the app (e.g. `http://192.168.1.35:8080`).
+4. In the application, click **`+ WiFi`**, name it (e.g. *Cámara Celular*), and enter `http://<PHONE_IP>:8080/video`.
+5. The camera is saved automatically for future sessions. Select it in the dropdown and click **ENCENDER**.
 
 ---
 
@@ -199,22 +249,14 @@ Alternatively, open the project in your IDE (IntelliJ IDEA, Eclipse or NetBeans)
 
 <br>
 
-**FrameDiff Security System** es un sistema de videovigilancia y detección de movimiento en tiempo real, desarrollado en Java como proyecto del curso de Programación Orientada a Objetos (UTP, 2026).
+**FrameDiff Security System** es un sistema de videovigilancia y detección de movimiento en tiempo real, desarrollado en Java para el curso de Programación Orientada a Objetos (UTP, 2026).
 
-Captura video con la API Sarxos Webcam a 640x480 y analiza los fotogramas con un motor propio de diferencia de fotogramas sobre matrices en escala de grises. Permite delimitar una zona de monitoreo (ROI), dispara una alarma sonora con `javax.sound.sampled`, guarda fotos de evidencia automáticamente, registra cada evento en una bitácora en tiempo real y lo almacena en una base de datos SQL Server.
-
-**Base de datos:** cada detección guarda su fecha, el porcentaje de movimiento y la ruta de la foto en la tabla `SystemLogs`. El guardado se hace en un hilo aparte para no congelar el video, y se limita a un registro cada 5 segundos para que el movimiento continuo no llene la base.
-
-**Arquitectura:** cuatro clases (`Main`, `Detector`, `Ventana` y `DeteccionDAO`) con encapsulamiento, separación de responsabilidades entre detección, captura, interfaz JavaFX y acceso a datos, y manejo de excepciones de I/O, audio y base de datos.
-
-**Compatibilidad:** Windows (probado), Linux (probado), macOS (no soportado por restricciones de la librería Sarxos).
-
-**Ejecución:**
-
-1. Necesitas JDK 17 o superior, el SDK de JavaFX (se descarga aparte) y SQL Server con TCP/IP habilitado.
-2. Ejecuta `schema.sql` para crear la base `SecuritySystem` y la tabla `SystemLogs`.
-3. Copia `config.example.properties` como `config.properties` y rellena tu usuario y contraseña. Este archivo no se sube a GitHub.
-4. Compila y ejecuta `Main` desde la raíz del proyecto, como se muestra en la sección *Getting Started*.
+### Características y Diseño POO
+* **Soporte Multi-Cámara (Local y WiFi/IP):** Permite conectarse tanto a la webcam integrada de la laptop como a cámaras remotas de red o smartphones vía WiFi mediante el protocolo estándar MJPEG sobre HTTP (`http://IP:PUERTO/video`).
+* **Polimorfismo e Inversión de Dependencias:** La interfaz `FuenteCamara` desacopla completamente el motor de detección de los dispositivos físicos. Las clases `CamaraLocal` y `CamaraIP` implementan este contrato común de manera polimórfica.
+* **Persistencia de Cámaras (`GestorCamaras`):** Permite registrar nuevas cámaras WiFi con el botón `+ WiFi` y guardarlas de forma permanente en `camaras.properties`, así como eliminarlas con el botón `- Borrar`.
+* **Adaptación Dinámica y Preservación de Aspect Ratio:** Detección automática de la resolución real de la cámara (4:3 o 16:9 panorámico) ajustando los límites de la Región de Interés (ROI) y evitando distorsiones o recortes en pantalla.
+* **Sin librerías pesadas de visión artificial:** La matriz de diferencia de frames y el cálculo de umbrales están desarrollados desde cero en Java puro.
 
 </details>
 

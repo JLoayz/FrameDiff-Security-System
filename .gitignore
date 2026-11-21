@@ -10,5 +10,6 @@ out/
 # Carpeta de evidencias de video
 Evidencias/
 
-# Credenciales de la base de datos
+# Credenciales y configuraciones locales
 config.properties
+camaras.properties

@@ -50,6 +50,75 @@
     -fx-border-color: #8ec07c;
 }
 
+/* Controles de cámara */
+.combo-box {
+    -fx-background-color: #1d2021;
+    -fx-border-color: #504945;
+    -fx-border-width: 1;
+    -fx-border-radius: 2;
+}
+
+.combo-box .cell {
+    -fx-text-fill: #ebdbb2;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #1d2021;
+    -fx-border-color: #504945;
+}
+
+.combo-box-popup .list-cell {
+    -fx-text-fill: #ebdbb2;
+    -fx-background-color: #1d2021;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #3c3836;
+}
+
+.combo-box-popup .list-cell:filled:selected {
+    -fx-background-color: #504945;
+    -fx-text-fill: #fabd2f;
+}
+
+.button-secundario {
+    -fx-background-color: #1d2021;
+    -fx-text-fill: #ebdbb2;
+    -fx-border-color: #504945;
+    -fx-border-width: 1;
+    -fx-background-radius: 2;
+    -fx-border-radius: 2;
+    -fx-cursor: hand;
+    -fx-padding: 5 10 5 10;
+}
+
+.button-secundario:hover {
+    -fx-background-color: #3c3836;
+    -fx-border-color: #83a598;
+}
+
+.button-peligro {
+    -fx-background-color: #1d2021;
+    -fx-text-fill: #ebdbb2;
+    -fx-border-color: #504945;
+    -fx-border-width: 1;
+    -fx-background-radius: 2;
+    -fx-border-radius: 2;
+    -fx-cursor: hand;
+    -fx-padding: 5 10 5 10;
+}
+
+.button-peligro:hover {
+    -fx-background-color: #cc241d;
+    -fx-text-fill: #fbf1c7;
+    -fx-border-color: #fb4934;
+}
+
+.button-peligro:disabled, .button-secundario:disabled {
+    -fx-opacity: 0.4;
+    -fx-cursor: default;
+}
+
 /* Bitácora (Derecha) */
 #bitacora {
     -fx-control-inner-background: #1d2021;
